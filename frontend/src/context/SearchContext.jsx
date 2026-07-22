@@ -5,11 +5,55 @@ import toast from 'react-hot-toast'
 const SearchContext = createContext()
 
 export const SearchProvider = ({ children }) => {
-  const [results, setResults]       = useState([])
-  const [loading, setLoading]       = useState(false)
-  const [error, setError]           = useState(null)
+  const [results, setResults] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
   const [searchInfo, setSearchInfo] = useState(null)
   const [currentQuery, setCurrentQuery] = useState('')
+
+  // const search = async (query) => {
+  //   if (!query.trim()) {
+  //     toast.error('Please enter a product name or URL')
+  //     return
+  //   }
+
+  //   setLoading(true)
+  //   setError(null)
+  //   setResults([])
+  //   setCurrentQuery(query)
+
+  //   const toastId = toast.loading(
+  //     '⚡ Searching across all stores...',
+  //     { duration: Infinity }
+  //   )
+
+  //   try {
+  //     const data = await apiSearch(query)
+
+  //     setResults(data.results || [])
+  //     setSearchInfo({
+  //       searchTerm:   data.searchTerm,
+  //       queryType:    data.queryType,
+  //       totalResults: data.totalResults,
+  //       lowestPrice:  data.lowestPrice,
+  //       lowestSite:   data.lowestSite,
+  //       highestPrice: data.highestPrice,
+  //       savings:      data.savings,
+  //       fromCache:    data.fromCache,
+  //     })
+
+  //     toast.success(
+  //       `Found ${data.totalResults} results! Lowest: ₹${data.lowestPrice?.toLocaleString()} on ${data.lowestSite}`,
+  //       { id: toastId, duration: 4000 }
+  //     )
+  //   } catch (err) {
+  //     const msg = err.response?.data?.message || 'Something went wrong. Try again.'
+  //     setError(msg)
+  //     toast.error(msg, { id: toastId })
+  //   } finally {
+  //     setLoading(false)
+  //   }
+  // }
 
   const search = async (query) => {
     if (!query.trim()) {
@@ -28,25 +72,64 @@ export const SearchProvider = ({ children }) => {
     )
 
     try {
+      console.log('📤 Sending search request for:', query)
+
       const data = await apiSearch(query)
 
-      setResults(data.results || [])
-      setSearchInfo({
-        searchTerm:   data.searchTerm,
-        queryType:    data.queryType,
-        totalResults: data.totalResults,
-        lowestPrice:  data.lowestPrice,
-        lowestSite:   data.lowestSite,
-        highestPrice: data.highestPrice,
-        savings:      data.savings,
-        fromCache:    data.fromCache,
-      })
+      // ✅ LOG THE FULL RESPONSE
+      console.log('📦 Full API Response:', JSON.stringify(data, null, 2))
+      console.log('📦 Response keys:', Object.keys(data))
+      console.log('📦 Results:', data.results)
+      console.log('📦 totalResults:', data.totalResults)
+      console.log('📦 lowestPrice:', data.lowestPrice)
+      console.log('📦 lowestSite:', data.lowestSite)
 
-      toast.success(
-        `Found ${data.totalResults} results! Lowest: ₹${data.lowestPrice?.toLocaleString()} on ${data.lowestSite}`,
-        { id: toastId, duration: 4000 }
-      )
+      // ✅ Check if data exists
+      if (!data) {
+        throw new Error('No data received from server')
+      }
+
+      // ✅ Check if results exist
+      const resultsArray = data.results || []
+      console.log('📊 Results array length:', resultsArray.length)
+
+      setResults(resultsArray)
+
+      // ✅ FIX: Set searchInfo with proper fallbacks
+      const info = {
+        searchTerm: data.searchTerm || query || 'Unknown',
+        queryType: data.queryType || 'name',
+        totalResults: data.totalResults || resultsArray.length || 0,
+        lowestPrice: data.lowestPrice || (resultsArray.length > 0 ? Math.min(...resultsArray.map(r => r.price)) : 0),
+        lowestSite: data.lowestSite || (resultsArray.length > 0 ? resultsArray[0]?.site : 'N/A'),
+        highestPrice: data.highestPrice || (resultsArray.length > 0 ? Math.max(...resultsArray.map(r => r.price)) : 0),
+        savings: data.savings || 0,
+        fromCache: data.fromCache || false,
+      }
+
+      console.log('📊 Search Info:', info)
+      setSearchInfo(info)
+
+      // ✅ FIX: Show proper toast message
+      const total = info.totalResults
+      const price = info.lowestPrice
+      const site = info.lowestSite
+
+      if (total > 0 && price > 0) {
+        toast.success(
+          `Found ${total} results! Lowest: ₹${price.toLocaleString()} on ${site}`,
+          { id: toastId, duration: 4000 }
+        )
+      } else if (total > 0) {
+        toast.success(`Found ${total} results!`, { id: toastId, duration: 4000 })
+      } else {
+        toast.error('No results found. Try a different search.', { id: toastId })
+      }
+
     } catch (err) {
+      console.error('❌ Search error:', err)
+      console.error('❌ Error details:', err.response?.data || err.message)
+
       const msg = err.response?.data?.message || 'Something went wrong. Try again.'
       setError(msg)
       toast.error(msg, { id: toastId })
