@@ -18,14 +18,26 @@ const searchProducts = asyncHandler(async (req, res) => {
 
     if (cachedResult && cachedResult.results.length > 0) {
         console.log(`📦 Cache hit for: "${cleanQuery}"`);
+        // return res.json({
+        //     success: true,
+        //     fromCache: true,
+        //     results: cachedResult.results,
+        //     totalResults: cachedResult.results.length,
+        //     lowestPrice: cachedResult.results[0].price,
+        //     lowestSite: cachedResult.results[0].site,
+        // });
+
         return res.json({
             success: true,
             fromCache: true,
             results: cachedResult.results,
             totalResults: cachedResult.results.length,
-            lowestPrice: cachedResult.results[0].price,
-            lowestSite: cachedResult.results[0].site,
-        });
+            lowestPrice: cachedResult.results[0]?.price || 0,
+            lowestSite: cachedResult.results[0]?.site || 'Unknown',
+            searchTerm: cleanQuery,
+            queryType: 'name'
+        })
+
     }
     // ------------ Run All Scrapers ---------------
 
@@ -66,6 +78,12 @@ const searchProducts = asyncHandler(async (req, res) => {
     });
 
     // ------------ Send Response to Frontend --------------
+
+    console.log('📤 Sending response with:', {
+    totalResults: results.length,
+    lowestPrice,
+    lowestSite: lowestResult?.site
+  })
 
     res.status(200).json({
         success: true,
