@@ -51,7 +51,7 @@ app.use(helmet());
 
 // ── CORS ───────────────────────────────────────────────
 app.use(cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: process.env.CLIENT_URL || "https://flash-deal-frontend.onrender.com",
     methods: ["GET", "POST", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
