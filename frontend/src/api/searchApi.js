@@ -1,8 +1,11 @@
 import axios from 'axios'
 
-// Base URL — uses Vite proxy in dev, so no need for full URL
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api'
+
+// In development, Vite proxy handles /api requests.
+// In production, set VITE_API_URL to your deployed backend URL, e.g. https://your-backend.onrender.com/api
 const API = axios.create({
-  baseURL: '/api',
+  baseURL: API_BASE_URL,
   headers: { 'Content-Type': 'application/json' },
   timeout: 60000, // 60s — scraping takes time
 })
