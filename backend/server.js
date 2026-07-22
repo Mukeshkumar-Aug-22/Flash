@@ -101,11 +101,7 @@ connectDB();
 const app = express();
 
 app.use(cors({
-  origin: [
-    'https://flash-deal-frontend.onrender.com',
-    'http://localhost:5173',
-    'http://localhost:3000'
-  ],
+  origin: "*",
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
