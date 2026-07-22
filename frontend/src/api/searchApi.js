@@ -1,9 +1,11 @@
 import axios from 'axios'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api'
+const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD
+  ? 'https://flash-deal-backend.onrender.com/api'
+  : '/api')
 
 // In development, Vite proxy handles /api requests.
-// In production, set VITE_API_URL to your deployed backend URL, e.g. https://your-backend.onrender.com/api
+// In production, this falls back to the deployed Render backend URL.
 const API = axios.create({
   baseURL: API_BASE_URL,
   headers: { 'Content-Type': 'application/json' },
