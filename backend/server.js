@@ -31,6 +31,7 @@
 const express = require("express");
 require("dotenv/config");                                    // ✅ your style
 const cors = require("cors");
+
 const http = require("http");
 const morgan = require("morgan");
 const helmet = require("helmet");
@@ -51,7 +52,8 @@ app.use(helmet());
 
 // ── CORS ───────────────────────────────────────────────
 app.use(cors({
-    origin: process.env.CLIENT_URL || "https://flash-deal-frontend.onrender.com",
+    // origin: process.env.CLIENT_URL || "https://flash-deal-frontend.onrender.com",
+    origin: "https://flash-deal-frontend.onrender.com",
     methods: ["GET", "POST", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
