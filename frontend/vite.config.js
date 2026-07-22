@@ -8,7 +8,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'https://flash-deal-backend.onrender.com',
+        target: "https://flash-deal-backend-czs3.onrender.com",
         changeOrigin: true,
       },
     },
