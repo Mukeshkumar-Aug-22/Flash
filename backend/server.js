@@ -67,7 +67,7 @@ app.use(errorHandler);
 
 // Start Server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log('');
   console.log('⚡ ================================== ⚡');
   console.log(`   Flash AI Server running on port ${PORT}`);
