@@ -18,15 +18,23 @@ const app = express();
 // =============================================
 // CORS - CORRECTED (No wildcard options)
 // =============================================
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:5173',
+  process.env.CLIENT_URL,
+  'https://flash-deal-frontend.onrender.com'
+].filter(Boolean); // Removes undefined/null values
+
 const corsOptions = {
-  origin: ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173', process.env.CLIENT_URL || "https://flash-deal-frontend.onrender.com"],
-//   origin: [process.env.CLIENT_URL || "https://flash-deal-frontend.onrender.com"],
+  origin: allowedOrigins,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   credentials: true,
 };
 
 app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Handle preflight requests
 
 // Security Middleware
 app.use(helmet({
