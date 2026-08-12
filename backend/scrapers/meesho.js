@@ -1,5 +1,4 @@
 const puppeteer = require('puppeteer-core');
-const chromium = require('@sparticuz/chromium');
 const cheerio = require('cheerio');
 
 const scrapeMeesho = async (query) => {
@@ -8,22 +7,15 @@ const scrapeMeesho = async (query) => {
   try {
     console.log(`🔍 Meesho: Searching for "${query}"...`);
 
-    let executablePath;
-    try {
-      executablePath = await chromium.executablePath();
-    } catch (e) {
-      console.error('❌ Chromium not found:', e.message);
-      return [];
-    }
+    const executablePath = process.env.CHROME_PATH || '/usr/bin/google-chrome-stable';
 
     browser = await puppeteer.launch({
-      executablePath: executablePath,
+      executablePath,
       headless: true,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
         '--disable-gpu',
         '--window-size=1366,768'
       ],
@@ -47,6 +39,7 @@ const scrapeMeesho = async (query) => {
       timeout: 30000,
     });
 
+    // Scroll to load more products
     await page.evaluate(async () => {
       await new Promise((resolve) => {
         let totalHeight = 0;
@@ -107,9 +100,7 @@ const scrapeMeesho = async (query) => {
       const link = $('a', el).first().attr('href') || '';
       const productUrl = link.startsWith('http')
         ? link
-        : link 
-          ? `https://www.meesho.com${link}`
-          : '';
+        : `https://www.meesho.com${link}`;
 
       if (title && priceText && parseFloat(priceText) > 0) {
         results.push({

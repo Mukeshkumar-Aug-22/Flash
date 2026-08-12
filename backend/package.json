@@ -4,15 +4,13 @@
   "main": "server.js",
   "scripts": {
     "server": "nodemon server.js",
-    "start": "node server.js",
-    "postinstall": "npx @sparticuz/chromium install"
+    "start": "node server.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@sparticuz/chromium": "^147.0.0",
     "axios": "^1.16.1",
     "cheerio": "^1.2.0",
     "cors": "^2.8.6",

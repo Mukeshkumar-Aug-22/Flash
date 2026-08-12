@@ -1,5 +1,4 @@
 const puppeteer = require('puppeteer-core');
-const chromium = require('@sparticuz/chromium');
 const cheerio = require('cheerio');
 
 const scrapeAmazon = async (query) => {
@@ -8,27 +7,16 @@ const scrapeAmazon = async (query) => {
   try {
     console.log(`🔍 Amazon: Searching for "${query}"...`);
 
-    // ✅ Get Chromium path for Render
-    let executablePath;
-    try {
-      executablePath = await chromium.executablePath();
-      console.log(`✅ Chromium path: ${executablePath}`);
-    } catch (e) {
-      console.error('❌ Chromium not found:', e.message);
-      return [];
-    }
+    const executablePath = process.env.CHROME_PATH || '/usr/bin/google-chrome-stable';
 
     browser = await puppeteer.launch({
-      executablePath: executablePath,
+      executablePath,
       headless: true,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
         '--disable-gpu',
-        '--disable-webgl',
-        '--disable-software-rasterizer',
         '--window-size=1366,768'
       ],
       ignoreHTTPSErrors: true,
@@ -54,7 +42,7 @@ const scrapeAmazon = async (query) => {
     await page.waitForSelector('[data-component-type="s-search-result"]', {
       timeout: 15000,
     }).catch(() => {
-      console.warn('⚠️  Amazon: Product selector not found');
+      console.warn('⚠️ Amazon: Product selector not found');
     });
 
     const html = await page.content();
@@ -90,9 +78,7 @@ const scrapeAmazon = async (query) => {
       
       const productUrl = relativeLink.startsWith('http')
         ? relativeLink
-        : relativeLink 
-          ? `https://www.amazon.in${relativeLink}`
-          : '';
+        : `https://www.amazon.in${relativeLink}`;
 
       if (title && priceWhole && parseFloat(priceWhole) > 0) {
         results.push({

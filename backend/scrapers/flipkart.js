@@ -1,5 +1,4 @@
 const puppeteer = require('puppeteer-core');
-const chromium = require('@sparticuz/chromium');
 const cheerio = require('cheerio');
 
 const scrapeFlipkart = async (query) => {
@@ -8,22 +7,15 @@ const scrapeFlipkart = async (query) => {
   try {
     console.log(`🔍 Flipkart: Searching for "${query}"...`);
 
-    let executablePath;
-    try {
-      executablePath = await chromium.executablePath();
-    } catch (e) {
-      console.error('❌ Chromium not found:', e.message);
-      return [];
-    }
+    const executablePath = process.env.CHROME_PATH || '/usr/bin/google-chrome-stable';
 
     browser = await puppeteer.launch({
-      executablePath: executablePath,
+      executablePath,
       headless: true,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
         '--disable-gpu',
         '--window-size=1366,768'
       ],
@@ -47,11 +39,13 @@ const scrapeFlipkart = async (query) => {
       timeout: 30000,
     });
 
+    // Close login popup if it appears
     await page.evaluate(() => {
       const closeBtn = document.querySelector('button._2KpZ6l._2doB4z');
       if (closeBtn) closeBtn.click();
     }).catch(() => {});
 
+    // Scroll to load more products
     await page.evaluate(async () => {
       await new Promise((resolve) => {
         let totalHeight = 0;
@@ -119,9 +113,7 @@ const scrapeFlipkart = async (query) => {
 
       const productUrl = relativeLink.startsWith('http')
         ? relativeLink
-        : relativeLink 
-          ? `https://www.flipkart.com${relativeLink}`
-          : '';
+        : `https://www.flipkart.com${relativeLink}`;
 
       if (title && priceText && parseFloat(priceText) > 0) {
         results.push({
