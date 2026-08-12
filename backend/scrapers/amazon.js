@@ -7,10 +7,11 @@ const scrapeAmazon = async (query) => {
   try {
     console.log(`🔍 Amazon: Searching for "${query}"...`);
 
-    const executablePath = process.env.CHROME_PATH || '/usr/bin/google-chrome-stable';
+    // ✅ Use Render's built-in Chrome
+    const executablePath = '/usr/bin/google-chrome-stable';
 
     browser = await puppeteer.launch({
-      executablePath,
+      executablePath: executablePath,
       headless: true,
       args: [
         '--no-sandbox',

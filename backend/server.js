@@ -34,7 +34,6 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // Handle preflight requests
 
 // Security Middleware
 app.use(helmet({

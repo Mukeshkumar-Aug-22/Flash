@@ -7,10 +7,10 @@ const scrapeMeesho = async (query) => {
   try {
     console.log(`🔍 Meesho: Searching for "${query}"...`);
 
-    const executablePath = process.env.CHROME_PATH || '/usr/bin/google-chrome-stable';
+    const executablePath = '/usr/bin/google-chrome-stable';
 
     browser = await puppeteer.launch({
-      executablePath,
+      executablePath: executablePath,
       headless: true,
       args: [
         '--no-sandbox',
@@ -39,7 +39,6 @@ const scrapeMeesho = async (query) => {
       timeout: 30000,
     });
 
-    // Scroll to load more products
     await page.evaluate(async () => {
       await new Promise((resolve) => {
         let totalHeight = 0;

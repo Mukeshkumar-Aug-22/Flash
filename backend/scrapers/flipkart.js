@@ -7,10 +7,10 @@ const scrapeFlipkart = async (query) => {
   try {
     console.log(`🔍 Flipkart: Searching for "${query}"...`);
 
-    const executablePath = process.env.CHROME_PATH || '/usr/bin/google-chrome-stable';
+    const executablePath = '/usr/bin/google-chrome-stable';
 
     browser = await puppeteer.launch({
-      executablePath,
+      executablePath: executablePath,
       headless: true,
       args: [
         '--no-sandbox',
@@ -39,13 +39,11 @@ const scrapeFlipkart = async (query) => {
       timeout: 30000,
     });
 
-    // Close login popup if it appears
     await page.evaluate(() => {
       const closeBtn = document.querySelector('button._2KpZ6l._2doB4z');
       if (closeBtn) closeBtn.click();
     }).catch(() => {});
 
-    // Scroll to load more products
     await page.evaluate(async () => {
       await new Promise((resolve) => {
         let totalHeight = 0;
