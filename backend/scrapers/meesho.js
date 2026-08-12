@@ -8,7 +8,13 @@ const scrapeMeesho = async (query) => {
   try {
     console.log(`🔍 Meesho: Searching for "${query}"...`);
 
-    const executablePath = await chromium.executablePath();
+    let executablePath;
+    try {
+      executablePath = await chromium.executablePath();
+    } catch (e) {
+      console.error('❌ Chromium not found:', e.message);
+      return [];
+    }
 
     browser = await puppeteer.launch({
       executablePath: executablePath,
@@ -83,25 +89,25 @@ const scrapeMeesho = async (query) => {
       if (i >= 8) return false;
 
       const title = $('p.NewProductCard__ProductName-sc, p[class*="ProductName"]', el).first().text().trim() ||
-        $('p[class*="Title"]', el).first().text().trim() ||
-        $('p', el).first().text().trim() ||
-        '';
+                    $('p[class*="Title"]', el).first().text().trim() ||
+                    $('p', el).first().text().trim() ||
+                    '';
 
       let priceText = $('h5.NewProductCard__ProductPrice-sc, h5[class*="ProductPrice"]', el).first().text()
         .replace(/[₹,\s]/g, '').trim();
-
+      
       if (!priceText) {
         priceText = $('h5[class*="Price"]', el).first().text()
           .replace(/[₹,\s]/g, '').trim();
       }
 
       const image = $('img', el).first().attr('src') ||
-        $('img', el).first().attr('data-src') || '';
+                    $('img', el).first().attr('data-src') || '';
 
       const link = $('a', el).first().attr('href') || '';
       const productUrl = link.startsWith('http')
         ? link
-        : link
+        : link 
           ? `https://www.meesho.com${link}`
           : '';
 

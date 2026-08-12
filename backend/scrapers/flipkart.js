@@ -8,7 +8,13 @@ const scrapeFlipkart = async (query) => {
   try {
     console.log(`🔍 Flipkart: Searching for "${query}"...`);
 
-    const executablePath = await chromium.executablePath();
+    let executablePath;
+    try {
+      executablePath = await chromium.executablePath();
+    } catch (e) {
+      console.error('❌ Chromium not found:', e.message);
+      return [];
+    }
 
     browser = await puppeteer.launch({
       executablePath: executablePath,
@@ -41,13 +47,11 @@ const scrapeFlipkart = async (query) => {
       timeout: 30000,
     });
 
-    // Dismiss login popup if appears
     await page.evaluate(() => {
       const closeBtn = document.querySelector('button._2KpZ6l._2doB4z');
       if (closeBtn) closeBtn.click();
-    }).catch(() => { });
+    }).catch(() => {});
 
-    // Scroll to load more products
     await page.evaluate(async () => {
       await new Promise((resolve) => {
         let totalHeight = 0;
@@ -92,10 +96,10 @@ const scrapeFlipkart = async (query) => {
       if (i >= 8) return false;
 
       const title = $('._4rR01T', el).first().text().trim() ||
-        $('.s1Q9rs', el).first().text().trim() ||
-        $('.IRpwTa', el).first().text().trim() ||
-        $('a[title]', el).first().attr('title') ||
-        '';
+                    $('.s1Q9rs', el).first().text().trim() ||
+                    $('.IRpwTa', el).first().text().trim() ||
+                    $('a[title]', el).first().attr('title') ||
+                    '';
 
       let priceText = $('._30jeq3', el).first().text().replace(/[₹,]/g, '').trim();
       if (!priceText) {
@@ -106,16 +110,16 @@ const scrapeFlipkart = async (query) => {
       }
 
       const image = $('img._396cs4', el).first().attr('src') ||
-        $('img._2r_T1I', el).first().attr('src') ||
-        $('img.DByuf4', el).first().attr('src') || '';
+                    $('img._2r_T1I', el).first().attr('src') ||
+                    $('img.DByuf4', el).first().attr('src') || '';
 
       const relativeLink = $('a._1fQZEK', el).first().attr('href') ||
-        $('a.s1Q9rs', el).first().attr('href') ||
-        $('a.CGtC98', el).first().attr('href') || '';
+                           $('a.s1Q9rs', el).first().attr('href') ||
+                           $('a.CGtC98', el).first().attr('href') || '';
 
       const productUrl = relativeLink.startsWith('http')
         ? relativeLink
-        : relativeLink
+        : relativeLink 
           ? `https://www.flipkart.com${relativeLink}`
           : '';
 
