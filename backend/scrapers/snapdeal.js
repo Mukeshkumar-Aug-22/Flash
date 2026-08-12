@@ -1,21 +1,22 @@
+
+
+
 const axios = require('axios');
 const cheerio = require('cheerio');
 
 const scrapeSnapdeal = async (query) => {
   try {
-    console.log(`🔍 Snapdeal: Searching for "${query}"...`);
-
     const searchUrl = `https://www.snapdeal.com/search?keyword=${encodeURIComponent(query)}&sort=rlvncy`;
+
+    console.log(`🔍 Snapdeal: Searching for "${query}"...`);
 
     const { data } = await axios.get(searchUrl, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ' +
+                      'AppleWebKit/537.36 (KHTML, like Gecko) ' +
+                      'Chrome/120.0.0.0 Safari/537.36',
         'Accept-Language': 'en-IN,en;q=0.9',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Connection': 'keep-alive',
-        'Upgrade-Insecure-Requests': '1',
-        'Cache-Control': 'max-age=0',
+        'Accept': 'text/html,application/xhtml+xml',
       },
       timeout: 15000,
     });
@@ -23,68 +24,30 @@ const scrapeSnapdeal = async (query) => {
     const $ = cheerio.load(data);
     const results = [];
 
-    // Try all known Snapdeal card selectors
-    const cardSelectors = [
-      '.product-tuple-listing',
-      '.product-tuple-description',
-      '.favDp',
-      'div[itemtype="http://schema.org/Product"]',
-    ];
+    $('.product-tuple-listing, .product-tuple-description').slice(0, 5).each((i, el) => {
+      const title = $('p.product-title', el).text().trim() ||
+                    $('.product-title', el).text().trim();
 
-    let cards = $();
-    for (const sel of cardSelectors) {
-      const found = $(sel);
-      if (found.length > 0) { cards = found; break; }
-    }
+      const priceText = $('span.product-price', el).text().replace(/[₹,\s]/g, '').trim() ||
+                        $('.lfloat.product-price', el).text().replace(/[₹,\s]/g, '').trim();
 
-    console.log(`   Snapdeal: Found ${cards.length} raw cards`);
+      const originalPriceText = $('span.product-desc-price.strike', el).text().replace(/[₹,\s]/g, '').trim();
 
-    cards.slice(0, 6).each((i, el) => {
-      // Title
-      const title =
-        $('p.product-title', el).text().trim() ||
-        $('[class*="product-title"]', el).text().trim() ||
-        $('p[itemprop="name"]', el).text().trim() ||
-        $('.product-desc-rating p', el).text().trim();
+      const discount = $('div.product-discount span', el).text().trim();
 
-      // Price
-      const priceText =
-        $('span.product-price', el).text().replace(/[₹,\s]/g, '').trim() ||
-        $('[class*="product-price"]', el).first().text().replace(/[₹,\s]/g, '').trim() ||
-        $('span[itemprop="price"]', el).text().replace(/[₹,\s]/g, '').trim();
+      const image = $('img.product-image', el).attr('src') ||
+                    $('img.product-image', el).attr('data-src') || '';
 
-      // Original price
-      const originalPriceText =
-        $('span.product-desc-price.strike', el).text().replace(/[₹,\s]/g, '').trim() ||
-        $('[class*="strike"]', el).first().text().replace(/[₹,\s]/g, '').trim();
+      const link = $('a.dp-widget-link', el).attr('href') || '';
 
-      // Discount
-      const discount =
-        $('div.product-discount span', el).text().trim() ||
-        $('[class*="discount"]', el).first().text().trim();
-
-      // Image
-      const image =
-        $('img.product-image', el).attr('src') ||
-        $('img[class*="product"]', el).first().attr('src') ||
-        $('img', el).first().attr('src') || '';
-
-      // URL
-      const link =
-        $('a.dp-widget-link', el).attr('href') ||
-        $('a[class*="dp-widget"]', el).attr('href') ||
-        $('a', el).first().attr('href') || '';
-
-      const price = parseFloat(priceText);
-
-      if (title && price && price > 50) {
+      if (title && priceText && parseFloat(priceText) > 0) {
         results.push({
           site: 'Snapdeal',
-          title: title.slice(0, 120),
-          price,
+          title: title,
+          price: parseFloat(priceText),
           originalPrice: originalPriceText ? parseFloat(originalPriceText) : null,
           discount: discount || null,
-          image,
+          image: image,
           url: link,
           rating: null,
           ratingCount: null,

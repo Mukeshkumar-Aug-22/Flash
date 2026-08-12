@@ -1,11 +1,11 @@
 import axios from 'axios'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD
-  ? 'https://flash-deal-backend.onrender.com/api'
-  : '/api')
+// Use different URLs for development vs production
+const API_BASE_URL = import.meta.env.VITE_API_URL 
+  || (import.meta.env.PROD 
+    ? 'https://flash-deal-backend.onrender.com/api' 
+    : 'http://localhost:5000/api')
 
-// In development, Vite proxy handles /api requests.
-// In production, this falls back to the deployed Render backend URL.
 const API = axios.create({
   baseURL: API_BASE_URL,
   headers: { 'Content-Type': 'application/json' },
@@ -23,26 +23,30 @@ API.interceptors.response.use(
   }
 );
 
-
-// POST /api/search — search by name or URL
-// export const searchProducts = async (query) => {
-//   const { data } = await API.post('/search', { query })
-//   return data
-// }
-
 export const searchProducts = async (query) => {
   console.log('🔍 API call with query:', query)
   
   try {
     const response = await API.post('/search', { query })
-    console.log('📦 Full response object:', response)
+    console.log('📦 Full response:', response)
     console.log('📦 Response data:', response.data)
     
-    // ✅ Handle both wrapped and unwrapped responses
-    const data = response.data.data || response.data
+    // ✅ DIRECT RETURN - backend sends data directly
+    const data = response.data
     console.log('📦 Processed data:', data)
     
+    // Validate response
+    if (!data) {
+      throw new Error('No data received from server')
+    }
+    
+    if (!data.results) {
+      console.warn('⚠️ No results field in response:', data)
+      return { ...data, results: [] }
+    }
+    
     return data
+    
   } catch (error) {
     console.error('❌ API Error:', error)
     if (error.response) {
@@ -53,19 +57,16 @@ export const searchProducts = async (query) => {
   }
 }
 
-// GET /api/search/history
 export const getHistory = async () => {
   const { data } = await API.get('/search/history')
   return data
 }
 
-// DELETE /api/search/history
 export const clearHistory = async () => {
   const { data } = await API.delete('/search/history')
   return data
 }
 
-// DELETE /api/search/history/:id
 export const deleteHistoryItem = async (id) => {
   const { data } = await API.delete(`/search/history/${id}`)
   return data

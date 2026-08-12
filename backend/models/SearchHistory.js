@@ -1,43 +1,43 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
-const searchHistorySchema = new mongoose.Schema({
-
+const searchHistorySchema = new mongoose.Schema(
+  {
     query: {
-        type: String,
-        required: true,
-        trim: true,
+      type: String,
+      required: true,
+      trim: true,
     },
     type: {
-        type: String,
-        enum: ['name', 'url'],
-        default: 'name',
+      type: String,
+      enum: ['name', 'url'],
+      default: 'name',
     },
     lowestPrice: {
-        type: Number,
-        default: null,
-        // The cheapest price found across all sites
+      type: Number,
+      default: null,
     },
     lowestSite: {
-        type: String,
-        default: null,
-        // Which site had the lowest price
+      type: String,
+      default: null,
     },
     highestPrice: {
-        type: Number,
-        default: null,
-        // The most expensive price found
+      type: Number,
+      default: null,
     },
     resultCount: {
-        type: Number,
-        default: 0,
-        // How many total results were found
+      type: Number,
+      default: 0,
     },
     savings: {
-        type: Number,
-        default: null,
-        // Difference between highest and lowest price
+      type: Number,
+      default: null,
     },
+  },
+  {
+    timestamps: true,
+  }
+);
 
-}, {timestamps: true,},);
+searchHistorySchema.index({ createdAt: -1 });
 
-module.exports = mongoose.model("searchHistory", searchHistorySchema);
+module.exports = mongoose.model('SearchHistory', searchHistorySchema);

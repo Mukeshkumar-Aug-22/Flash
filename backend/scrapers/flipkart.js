@@ -6,6 +6,7 @@
 
 // const scrapeFlipkart = async (query) => {
 //   let browser;
+
 //   try {
 //     browser = await puppeteer.launch({
 //       headless: 'new',
@@ -14,126 +15,99 @@
 //         '--disable-setuid-sandbox',
 //         '--disable-dev-shm-usage',
 //         '--disable-gpu',
-//         '--window-size=1366,768',
 //       ],
 //     });
 
 //     const page = await browser.newPage();
 
 //     await page.setUserAgent(
-//       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+//       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ' +
+//       'AppleWebKit/537.36 (KHTML, like Gecko) ' +
+//       'Chrome/120.0.0.0 Safari/537.36'
 //     );
+
 //     await page.setViewport({ width: 1366, height: 768 });
 
-//     // Extra headers to look like a real browser
-//     await page.setExtraHTTPHeaders({
-//       'Accept-Language': 'en-IN,en;q=0.9',
-//       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-//     });
+//     const searchUrl = `https://www.flipkart.com/search?q=${encodeURIComponent(query)}`;
 
-//     const searchUrl = `https://www.flipkart.com/search?q=${encodeURIComponent(query)}&otracker=search`;
 //     console.log(`🔍 Flipkart: Searching for "${query}"...`);
 
-//     await page.goto(searchUrl, { waitUntil: 'networkidle2', timeout: 35000 });
+//     await page.goto(searchUrl, {
+//       waitUntil: 'domcontentloaded',
+//       timeout: 30000,
+//     });
 
-//     // Close login popup if it appears
+//     // Dismiss login popup if appears
 //     await page.evaluate(() => {
-//       const btns = document.querySelectorAll('button');
-//       for (const btn of btns) {
-//         if (btn.textContent.trim() === '✕' || btn.textContent.includes('✕')) {
-//           btn.click();
-//           break;
-//         }
-//       }
+//       const closeBtn = document.querySelector('button._2KpZ6l._2doB4z');
+//       if (closeBtn) closeBtn.click();
 //     }).catch(() => {});
 
-//     // Wait for products to load
 //     await new Promise(resolve => setTimeout(resolve, 2000));
 
 //     const html = await page.content();
 //     const $ = cheerio.load(html);
 //     const results = [];
 
-//     // Try every known Flipkart product card selector
-//     const cardSelectors = [
-//       'div[data-id]',           // universal product cards
+//     const productSelectors = [
 //       '._1AtVbE',
 //       '._2kHMtA',
 //       '.cPHDOP',
-//       '.col-12-12',
+//       '._13oc-S',
 //     ];
 
-//     let cards = $();
-//     for (const sel of cardSelectors) {
-//       const found = $(sel).filter((i, el) => {
-//         // Only pick cards that actually have a price inside
-//         return $(el).find('[class*="price"], [class*="Price"]').length > 0 ||
-//                $(el).text().includes('₹');
-//       });
-//       if (found.length > 2) { cards = found; break; }
+//     let productEls = $();
+//     for (const sel of productSelectors) {
+//       productEls = $(sel);
+//       if (productEls.length > 0) break;
 //     }
 
-//     console.log(`   Flipkart: Found ${cards.length} raw cards`);
+//     productEls.slice(0, 5).each((i, el) => {
+//       const title = $('._4rR01T', el).first().text().trim() ||
+//                     $('.s1Q9rs', el).first().text().trim() ||
+//                     $('.IRpwTa', el).first().text().trim() ||
+//                     $('a[title]', el).first().attr('title') || '';
 
-//     cards.slice(0, 6).each((i, el) => {
-//       // Title — try all known title selectors
-//       const title =
-//         $('[class*="KzDlHZ"]', el).first().text().trim() ||
-//         $('[class*="WKTcLC"]', el).first().text().trim() ||
-//         $('[class*="s1Q9rs"]', el).first().text().trim() ||
-//         $('[class*="_4rR01T"]', el).first().text().trim() ||
-//         $('a[title]', el).first().attr('title') ||
-//         $('a', el).first().text().trim();
+//       const priceText = $('._30jeq3', el).first().text().replace(/[₹,]/g, '').trim() ||
+//                         $('.Nx9bqj', el).first().text().replace(/[₹,]/g, '').trim() ||
+//                         $('._16Jk6d', el).first().text().replace(/[₹,]/g, '').trim();
 
-//       // Price — find any element containing ₹
-//       let price = null;
-//       $('*', el).each((j, elem) => {
-//         const text = $(elem).children().length === 0 ? $(elem).text().trim() : '';
-//         if (text.startsWith('₹') && text.length < 12) {
-//           const num = parseFloat(text.replace(/[₹,]/g, ''));
-//           if (num > 100 && !price) price = num;
-//         }
-//       });
+//       const originalPriceText = $('._3I9_wc', el).first().text().replace(/[₹,]/g, '').trim() ||
+//                                 $('.yRaY8j', el).first().text().replace(/[₹,]/g, '').trim();
 
-//       // Original price
-//       const originalPriceText =
-//         $('[class*="yRaY8j"]', el).first().text().replace(/[₹,]/g, '').trim() ||
-//         $('[class*="_3I9_wc"]', el).first().text().replace(/[₹,]/g, '').trim();
+//       const discount = $('._3Ay6Sb', el).first().text().trim();
 
-//       // Discount
-//       const discount =
-//         $('[class*="UkUFwK"] span', el).first().text().trim() ||
-//         $('[class*="_3Ay6Sb"]', el).first().text().trim();
+//       const image = $('img._396cs4', el).first().attr('src') ||
+//                     $('img._2r_T1I', el).first().attr('src') ||
+//                     $('img.DByuf4', el).first().attr('src') || '';
 
-//       // Image
-//       const image =
-//         $('img', el).first().attr('src') ||
-//         $('img', el).first().attr('data-src') || '';
+//       const relativeLink = $('a._1fQZEK', el).first().attr('href') ||
+//                            $('a.s1Q9rs', el).first().attr('href') ||
+//                            $('a.CGtC98', el).first().attr('href') ||
+//                            $('a', el).first().attr('href') || '';
 
-//       // URL
-//       const relLink =
-//         $('a[href*="/p/"]', el).first().attr('href') ||
-//         $('a', el).first().attr('href') || '';
-//       const url = relLink.startsWith('http')
-//         ? relLink
-//         : `https://www.flipkart.com${relLink}`;
+//       const productUrl = relativeLink.startsWith('http')
+//         ? relativeLink
+//         : `https://www.flipkart.com${relativeLink}`;
 
-//       // Rating
-//       const ratingText = $('[class*="XQDdHH"]', el).first().text().trim() ||
-//                          $('[class*="_3LWZlK"]', el).first().text().trim();
+//       const ratingText = $('._3LWZlK', el).first().text().trim() ||
+//                          $('.XQDdHH', el).first().text().trim();
 //       const rating = parseFloat(ratingText) || null;
 
-//       if (title && price && price > 100) {
+//       const ratingCount = $('._2_R_DZ span', el).first().text().trim() ||
+//                           $('.Wphh3N span', el).first().text().trim();
+
+//       if (title && priceText) {
 //         results.push({
 //           site: 'Flipkart',
-//           title: title.slice(0, 120),
-//           price,
+//           title: title,
+//           price: parseFloat(priceText),
 //           originalPrice: originalPriceText ? parseFloat(originalPriceText) : null,
 //           discount: discount || null,
-//           image,
-//           url,
-//           rating,
-//           ratingCount: null,
+//           image: image,
+//           url: productUrl,
+//           rating: rating,
+//           ratingCount: ratingCount || null,
 //           inStock: true,
 //         });
 //       }
@@ -152,23 +126,15 @@
 
 // module.exports = { scrapeFlipkart };
 
-
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const cheerio = require('cheerio');
 
 puppeteer.use(StealthPlugin());
 
-const isRelevant = (title, query) => {
-  if (!title || !query) return false;
-  const titleLower = title.toLowerCase();
-  const queryWords = query.toLowerCase().split(' ').filter(w => w.length > 2);
-  const matchCount = queryWords.filter(word => titleLower.includes(word)).length;
-  return matchCount >= Math.ceil(queryWords.length / 2);
-};
-
 const scrapeFlipkart = async (query) => {
   let browser;
+
   try {
     browser = await puppeteer.launch({
       headless: 'new',
@@ -177,36 +143,50 @@ const scrapeFlipkart = async (query) => {
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-gpu',
-        '--window-size=1366,768',
       ],
     });
 
     const page = await browser.newPage();
 
     await page.setUserAgent(
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ' +
+      'AppleWebKit/537.36 (KHTML, like Gecko) ' +
+      'Chrome/120.0.0.0 Safari/537.36'
     );
+
     await page.setViewport({ width: 1366, height: 768 });
 
-    await page.setExtraHTTPHeaders({
-      'Accept-Language': 'en-IN,en;q=0.9',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-    });
+    const searchUrl = `https://www.flipkart.com/search?q=${encodeURIComponent(query)}`;
 
-    const searchUrl = `https://www.flipkart.com/search?q=${encodeURIComponent(query)}&otracker=search`;
     console.log(`🔍 Flipkart: Searching for "${query}"...`);
 
-    await page.goto(searchUrl, { waitUntil: 'networkidle2', timeout: 35000 });
+    await page.goto(searchUrl, {
+      waitUntil: 'networkidle2',
+      timeout: 30000,
+    });
 
-    // Close login popup if it appears
+    // Dismiss login popup
     await page.evaluate(() => {
-      const btns = document.querySelectorAll('button');
-      for (const btn of btns) {
-        if (btn.textContent.trim() === '✕' || btn.textContent.includes('✕')) {
-          btn.click(); break;
-        }
-      }
-    }).catch(() => {});
+      const closeBtn = document.querySelector('button._2KpZ6l._2doB4z');
+      if (closeBtn) closeBtn.click();
+    }).catch(() => { });
+
+    // ✅ SCROLL to load more
+    await page.evaluate(async () => {
+      await new Promise((resolve) => {
+        let totalHeight = 0;
+        const distance = 500;
+        const timer = setInterval(() => {
+          const scrollHeight = document.body.scrollHeight;
+          window.scrollBy(0, distance);
+          totalHeight += distance;
+          if (totalHeight >= scrollHeight || totalHeight > 3000) {
+            clearInterval(timer);
+            resolve();
+          }
+        }, 500);
+      });
+    });
 
     await new Promise(resolve => setTimeout(resolve, 2000));
 
@@ -214,79 +194,92 @@ const scrapeFlipkart = async (query) => {
     const $ = cheerio.load(html);
     const results = [];
 
-    const cardSelectors = [
-      'div[data-id]',
-      '._1AtVbE',
-      '._2kHMtA',
-      '.cPHDOP',
-      '.col-12-12',
+    // ✅ Multiple selectors for Flipkart products
+    const productSelectors = [
+      '._1AtVbE',      // Old grid
+      '._2kHMtA',      // New grid
+      '.cPHDOP',       // List view
+      '._13oc-S',      // Alternative
+      '.tUxRFH',       // New layout
+      '._75nlfW',      // Another layout
+      '.col-12-12',    // Column layout
+      '[data-id]',     // Any element with data-id
     ];
-
-    let cards = $();
-    for (const sel of cardSelectors) {
-      const found = $(sel).filter((i, el) => {
-        return $(el).find('[class*="price"], [class*="Price"]').length > 0 ||
-               $(el).text().includes('₹');
-      });
-      if (found.length > 2) { cards = found; break; }
+    let productEls = $();
+    for (const sel of productSelectors) {
+      productEls = $(sel);
+      if (productEls.length > 0) {
+        console.log(`✅ Flipkart: Using selector "${sel}"`);
+        break;
+      }
     }
 
-    console.log(`   Flipkart: Found ${cards.length} raw cards`);
+    // ✅ Get ALL products
+    productEls.each((i, el) => {
+      if (i >= 8) return false;
 
-    cards.slice(0, 10).each((i, el) => {
-      const title =
-        $('[class*="KzDlHZ"]', el).first().text().trim() ||
-        $('[class*="WKTcLC"]', el).first().text().trim() ||
-        $('[class*="s1Q9rs"]', el).first().text().trim() ||
-        $('[class*="_4rR01T"]', el).first().text().trim() ||
+      // Multiple title selectors
+      const title = $('._4rR01T', el).first().text().trim() ||
+        $('.s1Q9rs', el).first().text().trim() ||
+        $('.IRpwTa', el).first().text().trim() ||
         $('a[title]', el).first().attr('title') ||
-        $('a', el).first().text().trim();
+        $('.wjcEIp', el).first().text().trim() ||
+        $('.B_NuCI', el).first().text().trim() ||
+        $('._2UzuFa', el).first().text().trim() ||
+        '';
 
-      let price = null;
-      $('*', el).each((j, elem) => {
-        const text = $(elem).children().length === 0 ? $(elem).text().trim() : '';
-        if (text.startsWith('₹') && text.length < 12) {
-          const num = parseFloat(text.replace(/[₹,]/g, ''));
-          if (num > 100 && !price) price = num;
-        }
-      });
+      // ✅ Multiple price selectors
+      let priceText = $('._30jeq3', el).first().text().replace(/[₹,]/g, '').trim();
+      if (!priceText) {
+        priceText = $('.Nx9bqj', el).first().text().replace(/[₹,]/g, '').trim();
+      }
+      if (!priceText) {
+        priceText = $('._16Jk6d', el).first().text().replace(/[₹,]/g, '').trim();
+      }
+      if (!priceText) {
+        priceText = $('.yRaY8j', el).first().text().replace(/[₹,]/g, '').trim();
+      }
 
-      const originalPriceText =
-        $('[class*="yRaY8j"]', el).first().text().replace(/[₹,]/g, '').trim() ||
-        $('[class*="_3I9_wc"]', el).first().text().replace(/[₹,]/g, '').trim();
+      const originalPriceText = $('._3I9_wc', el).first().text().replace(/[₹,]/g, '').trim() ||
+        $('.yRaY8j', el).first().text().replace(/[₹,]/g, '').trim();
 
-      const discount =
-        $('[class*="UkUFwK"] span', el).first().text().trim() ||
-        $('[class*="_3Ay6Sb"]', el).first().text().trim();
+      const discount = $('._3Ay6Sb', el).first().text().trim() ||
+        $('._1localz span', el).first().text().trim();
 
-      const image =
-        $('img', el).first().attr('src') ||
-        $('img', el).first().attr('data-src') || '';
+      const image = $('img._396cs4', el).first().attr('src') ||
+        $('img._2r_T1I', el).first().attr('src') ||
+        $('img.DByuf4', el).first().attr('src') ||
+        $('img[loading="eager"]', el).first().attr('src') || '';
 
-      const relLink =
-        $('a[href*="/p/"]', el).first().attr('href') ||
+      const relativeLink = $('a._1fQZEK', el).first().attr('href') ||
+        $('a.s1Q9rs', el).first().attr('href') ||
+        $('a.CGtC98', el).first().attr('href') ||
         $('a', el).first().attr('href') || '';
-      const url = relLink.startsWith('http')
-        ? relLink
-        : `https://www.flipkart.com${relLink}`;
 
-      const ratingText =
-        $('[class*="XQDdHH"]', el).first().text().trim() ||
-        $('[class*="_3LWZlK"]', el).first().text().trim();
+      const productUrl = relativeLink.startsWith('http')
+        ? relativeLink
+        : relativeLink
+          ? `https://www.flipkart.com${relativeLink}`
+          : '';
+
+      const ratingText = $('._3LWZlK', el).first().text().trim() ||
+        $('.XQDdHH', el).first().text().trim();
       const rating = parseFloat(ratingText) || null;
 
-      // ── Only add relevant results ──
-      if (title && price && price > 100 && isRelevant(title, query)) {
+      const ratingCount = $('._2_R_DZ span', el).first().text().trim() ||
+        $('.Wphh3N span', el).first().text().trim();
+
+      if (title && priceText && parseFloat(priceText) > 0) {
         results.push({
           site: 'Flipkart',
-          title: title.slice(0, 120),
-          price,
+          title: title.substring(0, 100),
+          price: parseFloat(priceText),
           originalPrice: originalPriceText ? parseFloat(originalPriceText) : null,
           discount: discount || null,
-          image,
-          url,
-          rating,
-          ratingCount: null,
+          image: image,
+          url: productUrl,
+          rating: rating,
+          ratingCount: ratingCount || null,
           inStock: true,
         });
       }
@@ -304,3 +297,4 @@ const scrapeFlipkart = async (query) => {
 };
 
 module.exports = { scrapeFlipkart };
+
