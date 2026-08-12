@@ -1,8 +1,7 @@
+// ✅ CORRECT - No StealthPlugin
 const puppeteer = require('puppeteer-core');
 const chromium = require('@sparticuz/chromium');
 const cheerio = require('cheerio');
-
-puppeteer.use(StealthPlugin());
 
 const scrapeAmazon = async (query) => {
     let browser;
@@ -10,11 +9,10 @@ const scrapeAmazon = async (query) => {
     try {
         console.log(`🔍 Amazon: Searching for "${query}"...`);
 
-        // ✅ NEW: Get Chrome path for Render
         const executablePath = await chromium.executablePath();
 
         browser = await puppeteer.launch({
-            executablePath: executablePath,  // ← NEW: Use chromium
+            executablePath: executablePath,
             headless: true,
             args: [
                 '--no-sandbox',
@@ -41,32 +39,13 @@ const scrapeAmazon = async (query) => {
 
         const searchUrl = `https://www.amazon.in/s?k=${encodeURIComponent(query)}`;
 
-        console.log(`🔍 Amazon: Searching for "${query}"...`);
-
         await page.goto(searchUrl, {
             waitUntil: 'networkidle2',
             timeout: 30000,
         });
 
-        // Scroll to load more products
-        await page.evaluate(async () => {
-            await new Promise((resolve) => {
-                let totalHeight = 0;
-                const distance = 500;
-                const timer = setInterval(() => {
-                    const scrollHeight = document.body.scrollHeight;
-                    window.scrollBy(0, distance);
-                    totalHeight += distance;
-                    if (totalHeight >= scrollHeight || totalHeight > 3000) {
-                        clearInterval(timer);
-                        resolve();
-                    }
-                }, 500);
-            });
-        });
-
         await page.waitForSelector('[data-component-type="s-search-result"]', {
-            timeout: 10000,
+            timeout: 15000,
         }).catch(() => {
             console.warn('⚠️  Amazon: Product selector not found');
         });
@@ -78,14 +57,11 @@ const scrapeAmazon = async (query) => {
         $('[data-component-type="s-search-result"]').each((i, el) => {
             if (i >= 8) return false;
 
-            // ✅ FULL TITLE - No truncation
             const title = $('h2 span.a-text-normal', el).text().trim() ||
                 $('h2 a span', el).text().trim() ||
                 $('h2', el).text().trim() ||
-                $('[data-cy="title"]', el).text().trim() ||
                 '';
 
-            // Price extraction
             let priceWhole = $('.a-price-whole', el).first().text()
                 .replace(/[,\.]/g, '').trim();
 
@@ -99,11 +75,6 @@ const scrapeAmazon = async (query) => {
                     .replace(/[,\.]/g, '').trim();
             }
 
-            const originalPriceText = $('.a-price.a-text-price span.a-offscreen', el)
-                .first().text().replace(/[₹,]/g, '').trim();
-
-            const discount = $('.a-badge-text', el).first().text().trim();
-
             const image = $('img.s-image', el).attr('src') ||
                 $('img[src*=".jpg"]', el).first().attr('src') || '';
 
@@ -116,23 +87,17 @@ const scrapeAmazon = async (query) => {
                     ? `https://www.amazon.in${relativeLink}`
                     : '';
 
-            const ratingText = $('.a-icon-alt', el).first().text();
-            const rating = parseFloat(ratingText) || null;
-
-            const ratingCount = $('.a-size-base.s-underline-text', el).first().text().trim();
-
-            // ✅ Only add if title AND price exist
             if (title && priceWhole && parseFloat(priceWhole) > 0) {
                 results.push({
                     site: 'Amazon',
-                    title: title,  // ✅ FULL TITLE - no substring
+                    title: title,
                     price: parseFloat(priceWhole),
-                    originalPrice: originalPriceText ? parseFloat(originalPriceText) : null,
-                    discount: discount || null,
+                    originalPrice: null,
+                    discount: null,
                     image: image,
                     url: productUrl,
-                    rating: rating,
-                    ratingCount: ratingCount || null,
+                    rating: null,
+                    ratingCount: null,
                     inStock: true,
                 });
             }
