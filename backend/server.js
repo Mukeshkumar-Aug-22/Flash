@@ -117,5 +117,12 @@ app.use('/api/search', require('./routes/searchRoutes'));
 app.use(notFound);
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// ── Start Server ───────────────────────────────────────
+const PORT = process.env.PORT || 5000;                     // ✅ your style
+server.listen(PORT, () => {                                // ✅ your style
+    console.log("⚡ ================================== ⚡");
+    console.log("   Flash AI Server running on PORT: " + PORT);
+    console.log("   URL: http://localhost:5000:" + PORT);
+    console.log("   Mode: " + (process.env.NODE_ENV || "development"));
+    console.log("⚡ ================================== ⚡");
+});
