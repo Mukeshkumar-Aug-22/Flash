@@ -1,4 +1,4 @@
-const puppeteer = require('puppeteer-core');
+const puppeteer = require('puppeteer');
 const cheerio = require('cheerio');
 
 const scrapeAmazon = async (query) => {
@@ -7,7 +7,7 @@ const scrapeAmazon = async (query) => {
   try {
     console.log(`🔍 Amazon: Searching for "${query}"...`);
 
-    // ✅ Use Render's built-in Chrome
+    // Use Render's built-in Chrome
     const executablePath = '/usr/bin/google-chrome-stable';
 
     browser = await puppeteer.launch({
@@ -66,17 +66,8 @@ const scrapeAmazon = async (query) => {
           .replace(/[₹,\.]/g, '').trim();
       }
 
-      if (!priceWhole) {
-        priceWhole = $('.a-price span[aria-hidden="true"]', el).first().text()
-          .replace(/[,\.]/g, '').trim();
-      }
-
-      const image = $('img.s-image', el).attr('src') || 
-                    $('img[src*=".jpg"]', el).first().attr('src') || '';
-
-      const relativeLink = $('h2 a.a-link-normal', el).attr('href') || 
-                           $('a.a-link-normal[href*="/dp/"]', el).first().attr('href') || '';
-      
+      const image = $('img.s-image', el).attr('src') || '';
+      const relativeLink = $('h2 a.a-link-normal', el).attr('href') || '';
       const productUrl = relativeLink.startsWith('http')
         ? relativeLink
         : `https://www.amazon.in${relativeLink}`;

@@ -1,6 +1,3 @@
-
-
-
 const axios = require('axios');
 const cheerio = require('cheerio');
 
@@ -26,10 +23,12 @@ const scrapeSnapdeal = async (query) => {
 
     $('.product-tuple-listing, .product-tuple-description').slice(0, 5).each((i, el) => {
       const title = $('p.product-title', el).text().trim() ||
-                    $('.product-title', el).text().trim();
+                    $('.product-title', el).text().trim() ||
+                    '';
 
       const priceText = $('span.product-price', el).text().replace(/[₹,\s]/g, '').trim() ||
-                        $('.lfloat.product-price', el).text().replace(/[₹,\s]/g, '').trim();
+                        $('.lfloat.product-price', el).text().replace(/[₹,\s]/g, '').trim() ||
+                        '';
 
       const originalPriceText = $('span.product-desc-price.strike', el).text().replace(/[₹,\s]/g, '').trim();
 

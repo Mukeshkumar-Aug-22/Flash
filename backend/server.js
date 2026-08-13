@@ -24,7 +24,7 @@ const corsOptions = {
     'http://localhost:5173',
     'http://localhost:3000',
     'http://127.0.0.1:5173',
-    process.env.CLIENT_URL || "https://flash-deal-frontend.onrender.com"
+    process.env.CLIENT_URL || 'https://flash-deal-frontend.onrender.com'
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
@@ -71,79 +71,17 @@ app.get('/', (req, res) => {
 // =============================================
 // 🧪 TEST CHROME ENDPOINT (CRITICAL FOR DEBUGGING)
 // =============================================
-app.get('/test-chrome', async (req, res) => {
+app.get('/test-chrome-launch', async (req, res) => {
   try {
-    const puppeteer = require('puppeteer-core');
-    const fs = require('fs');
-    
-    // Check multiple Chrome paths
-    const chromePaths = [
-      '/usr/bin/google-chrome-stable',
-      '/usr/bin/chromium',
-      '/usr/bin/chromium-browser',
-      '/opt/google/chrome/chrome',
-      '/usr/bin/google-chrome',
-      process.env.CHROME_PATH,
-    ].filter(Boolean);
-    
-    let foundPath = null;
-    const pathChecks = [];
-    
-    for (const path of chromePaths) {
-      const exists = fs.existsSync(path);
-      pathChecks.push({ path, exists });
-      if (exists) {
-        foundPath = path;
-        break;
-      }
-    }
-    
-    if (!foundPath) {
-      return res.json({ 
-        success: false, 
-        message: 'Chrome not found on system',
-        checkedPaths: pathChecks,
-        environment: process.env.NODE_ENV,
-      });
-    }
-    
-    // Try to launch Chrome
-    console.log(`✅ Test: Launching Chrome at ${foundPath}`);
+    const puppeteer = require('puppeteer');
     const browser = await puppeteer.launch({
-      executablePath: foundPath,
       headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-      ],
-      timeout: 10000,
+      args: ['--no-sandbox']
     });
-    
-    const page = await browser.newPage();
-    await page.goto('https://www.google.com', { 
-      waitUntil: 'domcontentloaded',
-      timeout: 10000,
-    });
-    const title = await page.title();
     await browser.close();
-    
-    res.json({ 
-      success: true, 
-      message: 'Chrome works! ✅',
-      chromePath: foundPath,
-      pageTitle: title,
-      checkedPaths: pathChecks,
-    });
-    
+    res.json({ success: true, message: 'Chrome launched successfully!' });
   } catch (error) {
-    console.error('❌ Chrome test error:', error.message);
-    res.json({ 
-      success: false, 
-      error: error.message,
-      stack: error.stack,
-    });
+    res.json({ success: false, error: error.message });
   }
 });
 

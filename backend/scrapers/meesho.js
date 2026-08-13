@@ -1,4 +1,4 @@
-const puppeteer = require('puppeteer-core');
+const puppeteer = require('puppeteer');
 const cheerio = require('cheerio');
 
 const scrapeMeesho = async (query) => {
@@ -7,10 +7,7 @@ const scrapeMeesho = async (query) => {
   try {
     console.log(`🔍 Meesho: Searching for "${query}"...`);
 
-    const executablePath = '/usr/bin/google-chrome-stable';
-
     browser = await puppeteer.launch({
-      executablePath: executablePath,
       headless: true,
       args: [
         '--no-sandbox',
@@ -39,6 +36,7 @@ const scrapeMeesho = async (query) => {
       timeout: 30000,
     });
 
+    // Scroll to load more products
     await page.evaluate(async () => {
       await new Promise((resolve) => {
         let totalHeight = 0;

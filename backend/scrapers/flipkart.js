@@ -1,4 +1,4 @@
-const puppeteer = require('puppeteer-core');
+const puppeteer = require('puppeteer');
 const cheerio = require('cheerio');
 
 const scrapeFlipkart = async (query) => {
@@ -7,10 +7,7 @@ const scrapeFlipkart = async (query) => {
   try {
     console.log(`🔍 Flipkart: Searching for "${query}"...`);
 
-    const executablePath = '/usr/bin/google-chrome-stable';
-
     browser = await puppeteer.launch({
-      executablePath: executablePath,
       headless: true,
       args: [
         '--no-sandbox',
