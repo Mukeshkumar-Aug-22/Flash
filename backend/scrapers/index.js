@@ -1,3 +1,4 @@
+const puppeteer = require('puppeteer');
 const { scrapeAmazon } = require('./amazon');
 const { scrapeFlipkart } = require('./flipkart');
 const { scrapeMeesho } = require('./meesho');
@@ -35,6 +36,7 @@ const extractProductNameFromUrl = (url) => {
   }
 };
 
+// ✅ FIX: Single browser instance (saves memory!)
 const runAllScrapers = async (query) => {
   const queryType = detectQueryType(query);
   let searchTerm = query;
@@ -49,46 +51,91 @@ const runAllScrapers = async (query) => {
 
   const startTime = Date.now();
 
-  const scraperPromises = [
-    scrapeAmazon(searchTerm),
-    scrapeFlipkart(searchTerm),
-    scrapeMeesho(searchTerm),
-    scrapeSnapdeal(searchTerm),
-  ];
+  // ✅ Launch ONE browser for all scrapers
+  const chromePath = process.env.CHROME_PATH || '/opt/render/.cache/puppeteer/chrome/linux-151.0.7922.77/chrome-linux64/chrome';
 
-  const scraperNames = ['Amazon', 'Flipkart', 'Meesho', 'Snapdeal'];
-  const settled = await Promise.allSettled(scraperPromises);
+  const browser = await puppeteer.launch({
+    executablePath: chromePath,
+    headless: true,
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--single-process',      // ✅ Helps with memory
+      '--no-zygote',           // ✅ Helps with memory
+      '--window-size=1366,768'
+    ],
+    ignoreHTTPSErrors: true,
+  });
 
-  let allResults = [];
+  try {
+    // ✅ Run all scrapers with the SAME browser
+    const [amazonResult, flipkartResult, meeshoResult, snapdealResult] = await Promise.allSettled([
+      scrapeAmazon(searchTerm, browser),   // Pass browser instance
+      scrapeFlipkart(searchTerm, browser), // Pass browser instance
+      scrapeMeesho(searchTerm, browser),   // Pass browser instance
+      scrapeSnapdeal(searchTerm),          // Snapdeal uses axios, no browser needed
+    ]);
 
-  settled.forEach((result, index) => {
-    if (result.status === 'fulfilled') {
-      console.log(`✅ ${scraperNames[index]}: ${result.value.length} results`);
-      allResults = [...allResults, ...result.value];
+    let allResults = [];
+
+    // Process Amazon results
+    if (amazonResult.status === 'fulfilled') {
+      console.log(`✅ Amazon: ${amazonResult.value.length} results`);
+      allResults = [...allResults, ...amazonResult.value];
     } else {
-      console.error(`❌ ${scraperNames[index]} failed:`, result.reason?.message);
+      console.error(`❌ Amazon failed:`, amazonResult.reason?.message);
     }
-  });
 
-  // Remove duplicates based on URL
-  const seen = new Set();
-  allResults = allResults.filter((item) => {
-    if (seen.has(item.url)) return false;
-    seen.add(item.url);
-    return true;
-  });
+    // Process Flipkart results
+    if (flipkartResult.status === 'fulfilled') {
+      console.log(`✅ Flipkart: ${flipkartResult.value.length} results`);
+      allResults = [...allResults, ...flipkartResult.value];
+    } else {
+      console.error(`❌ Flipkart failed:`, flipkartResult.reason?.message);
+    }
 
-  // Remove items with invalid prices
-  allResults = allResults.filter((item) => item.price && item.price > 0);
+    // Process Meesho results
+    if (meeshoResult.status === 'fulfilled') {
+      console.log(`✅ Meesho: ${meeshoResult.value.length} results`);
+      allResults = [...allResults, ...meeshoResult.value];
+    } else {
+      console.error(`❌ Meesho failed:`, meeshoResult.reason?.message);
+    }
 
-  // Sort by price (lowest first)
-  allResults.sort((a, b) => a.price - b.price);
+    // Process Snapdeal results (already handled)
+    if (snapdealResult.status === 'fulfilled') {
+      console.log(`✅ Snapdeal: ${snapdealResult.value.length} results`);
+      allResults = [...allResults, ...snapdealResult.value];
+    } else {
+      console.error(`❌ Snapdeal failed:`, snapdealResult.reason?.message);
+    }
 
-  const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
-  console.log('━'.repeat(50));
-  console.log(`✅ Total unique results: ${allResults.length} | Time: ${elapsed}s\n`);
+    // Remove duplicates based on URL
+    const seen = new Set();
+    allResults = allResults.filter((item) => {
+      if (seen.has(item.url)) return false;
+      seen.add(item.url);
+      return true;
+    });
 
-  return { results: allResults, searchTerm, queryType };
+    // Remove items with invalid prices
+    allResults = allResults.filter((item) => item.price && item.price > 0);
+
+    // Sort by price (lowest first)
+    allResults.sort((a, b) => a.price - b.price);
+
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+    console.log('━'.repeat(50));
+    console.log(`✅ Total unique results: ${allResults.length} | Time: ${elapsed}s\n`);
+
+    return { results: allResults, searchTerm, queryType };
+
+  } finally {
+    // ✅ Always close the browser
+    await browser.close();
+  }
 };
 
 module.exports = { runAllScrapers, detectQueryType };
