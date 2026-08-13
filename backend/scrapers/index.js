@@ -1,8 +1,4 @@
-const puppeteer = require('puppeteer');
-const { scrapeAmazon } = require('./amazon');
-const { scrapeFlipkart } = require('./flipkart');
-const { scrapeMeesho } = require('./meesho');
-const { scrapeSnapdeal } = require('./snapdeal');
+const axios = require('axios');
 
 const detectQueryType = (query) => {
   try {
@@ -17,26 +13,98 @@ const extractProductNameFromUrl = (url) => {
   try {
     const parsed = new URL(url);
     const pathname = parsed.pathname;
-
-    const segments = pathname
-      .replace(/^\//, '')
-      .split('/')
-      .filter(Boolean);
-
+    const segments = pathname.replace(/^\//, '').split('/').filter(Boolean);
     const productSegment = segments[0] || '';
-
-    const productName = productSegment
-      .replace(/-/g, ' ')
-      .replace(/[^a-zA-Z0-9\s]/g, '')
-      .trim();
-
+    const productName = productSegment.replace(/-/g, ' ').replace(/[^a-zA-Z0-9\s]/g, '').trim();
     return productName.split(' ').slice(0, 6).join(' ');
   } catch {
     return url;
   }
 };
 
-// ✅ FIX: Single browser instance (saves memory!)
+// ✅ FIXED: Handle null, undefined, and non-string values
+const parsePrice = (priceStr) => {
+  if (!priceStr) return null;
+  
+  // Convert to string if it's not already
+  const str = String(priceStr);
+  
+  // Remove currency symbols and commas
+  const cleaned = str.replace(/[₹$,]/g, '').replace(/,/g, '').trim();
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? null : num;
+};
+
+const extractSiteName = (source) => {
+  if (!source) return 'Unknown';
+  const sourceLower = String(source).toLowerCase();
+  if (sourceLower.includes('amazon')) return 'Amazon';
+  if (sourceLower.includes('flipkart')) return 'Flipkart';
+  if (sourceLower.includes('meesho')) return 'Meesho';
+  if (sourceLower.includes('snapdeal')) return 'Snapdeal';
+  if (sourceLower.includes('myntra')) return 'Myntra';
+  if (sourceLower.includes('tata')) return 'Tata CLiQ';
+  if (sourceLower.includes('reliance')) return 'Reliance Digital';
+  if (sourceLower.includes('croma')) return 'Croma';
+  return source.charAt(0).toUpperCase() + source.slice(1);
+};
+
+const searchProductWithSerpAPI = async (query) => {
+  try {
+    console.log(`🔍 Searching for "${query}" via SerpAPI...`);
+
+    const API_KEY = process.env.SERPAPI_KEY;
+    if (!API_KEY) {
+      console.error('❌ SERPAPI_KEY not found in environment variables');
+      return [];
+    }
+
+    const response = await axios.get('https://serpapi.com/search', {
+      params: {
+        api_key: API_KEY,
+        engine: 'google_shopping',
+        q: query,
+        gl: 'in',
+        hl: 'en',
+        num: 10,
+      },
+      timeout: 30000,
+    });
+
+    const data = response.data;
+    
+    if (!data.shopping_results || data.shopping_results.length === 0) {
+      console.log('⚠️ No shopping results found');
+      return [];
+    }
+
+    const results = data.shopping_results.map((item) => ({
+      site: extractSiteName(item.source || item.merchant || 'Unknown'),
+      title: item.title || 'Product',
+      price: parsePrice(item.price || '₹0'),
+      originalPrice: parsePrice(item.original_price || item.extracted_price || ''),
+      discount: item.discount || null,
+      image: item.thumbnail || item.image || '',
+      url: item.link || item.product_link || '#',
+      rating: item.rating || null,
+      ratingCount: item.reviews || null,
+      inStock: item.in_stock !== false,
+    }));
+
+    // Filter out results with no valid price
+    const validResults = results.filter(r => r.price !== null && r.price > 0);
+    console.log(`✅ Found ${validResults.length} valid results from SerpAPI`);
+    return validResults;
+
+  } catch (error) {
+    console.error(`❌ SerpAPI search error: ${error.message}`);
+    if (error.response) {
+      console.error('Response data:', error.response.data);
+    }
+    return [];
+  }
+};
+
 const runAllScrapers = async (query) => {
   const queryType = detectQueryType(query);
   let searchTerm = query;
@@ -46,96 +114,17 @@ const runAllScrapers = async (query) => {
     console.log(`🔗 URL detected. Extracted search term: "${searchTerm}"`);
   }
 
-  console.log(`\n⚡ Flash AI — Running all scrapers for: "${searchTerm}"`);
+  console.log(`\n⚡ Flash AI — Searching for: "${searchTerm}"`);
   console.log('━'.repeat(50));
 
   const startTime = Date.now();
+  const results = await searchProductWithSerpAPI(searchTerm);
+  const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+  
+  console.log('━'.repeat(50));
+  console.log(`✅ Total results: ${results.length} | Time: ${elapsed}s\n`);
 
-  // ✅ Launch ONE browser for all scrapers
-  const chromePath = process.env.CHROME_PATH || '/opt/render/.cache/puppeteer/chrome/linux-151.0.7922.77/chrome-linux64/chrome';
-
-  const browser = await puppeteer.launch({
-    executablePath: chromePath,
-    headless: true,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-gpu',
-      '--single-process',      // ✅ Helps with memory
-      '--no-zygote',           // ✅ Helps with memory
-      '--window-size=1366,768'
-    ],
-    ignoreHTTPSErrors: true,
-  });
-
-  try {
-    // ✅ Run all scrapers with the SAME browser
-    const [amazonResult, flipkartResult, meeshoResult, snapdealResult] = await Promise.allSettled([
-      scrapeAmazon(searchTerm, browser),   // Pass browser instance
-      scrapeFlipkart(searchTerm, browser), // Pass browser instance
-      scrapeMeesho(searchTerm, browser),   // Pass browser instance
-      scrapeSnapdeal(searchTerm),          // Snapdeal uses axios, no browser needed
-    ]);
-
-    let allResults = [];
-
-    // Process Amazon results
-    if (amazonResult.status === 'fulfilled') {
-      console.log(`✅ Amazon: ${amazonResult.value.length} results`);
-      allResults = [...allResults, ...amazonResult.value];
-    } else {
-      console.error(`❌ Amazon failed:`, amazonResult.reason?.message);
-    }
-
-    // Process Flipkart results
-    if (flipkartResult.status === 'fulfilled') {
-      console.log(`✅ Flipkart: ${flipkartResult.value.length} results`);
-      allResults = [...allResults, ...flipkartResult.value];
-    } else {
-      console.error(`❌ Flipkart failed:`, flipkartResult.reason?.message);
-    }
-
-    // Process Meesho results
-    if (meeshoResult.status === 'fulfilled') {
-      console.log(`✅ Meesho: ${meeshoResult.value.length} results`);
-      allResults = [...allResults, ...meeshoResult.value];
-    } else {
-      console.error(`❌ Meesho failed:`, meeshoResult.reason?.message);
-    }
-
-    // Process Snapdeal results (already handled)
-    if (snapdealResult.status === 'fulfilled') {
-      console.log(`✅ Snapdeal: ${snapdealResult.value.length} results`);
-      allResults = [...allResults, ...snapdealResult.value];
-    } else {
-      console.error(`❌ Snapdeal failed:`, snapdealResult.reason?.message);
-    }
-
-    // Remove duplicates based on URL
-    const seen = new Set();
-    allResults = allResults.filter((item) => {
-      if (seen.has(item.url)) return false;
-      seen.add(item.url);
-      return true;
-    });
-
-    // Remove items with invalid prices
-    allResults = allResults.filter((item) => item.price && item.price > 0);
-
-    // Sort by price (lowest first)
-    allResults.sort((a, b) => a.price - b.price);
-
-    const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
-    console.log('━'.repeat(50));
-    console.log(`✅ Total unique results: ${allResults.length} | Time: ${elapsed}s\n`);
-
-    return { results: allResults, searchTerm, queryType };
-
-  } finally {
-    // ✅ Always close the browser
-    await browser.close();
-  }
+  return { results, searchTerm, queryType };
 };
 
 module.exports = { runAllScrapers, detectQueryType };
