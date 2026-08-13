@@ -8,10 +8,7 @@ const scrapeMeesho = async (query, retries = 3) => {
     try {
       console.log(`🔍 Meesho: Searching for "${query}" (Attempt ${attempt}/${retries})...`);
 
-      const chromePath = process.env.CHROME_PATH || '/opt/render/.cache/puppeteer/chrome/linux-151.0.7922.77/chrome-linux64/chrome';
-
       browser = await puppeteer.launch({
-        executablePath: chromePath,
         headless: true,
         args: [
           '--no-sandbox',
