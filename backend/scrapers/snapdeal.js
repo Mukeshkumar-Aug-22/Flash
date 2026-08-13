@@ -8,7 +8,6 @@ const scrapeSnapdeal = async (query, retries = 3) => {
 
       console.log(`🔍 Snapdeal: Searching for "${query}" (Attempt ${attempt}/${retries})...`);
 
-      // Add random delay
       const delay = Math.floor(Math.random() * 3000) + 1000;
       await new Promise(resolve => setTimeout(resolve, delay));
 

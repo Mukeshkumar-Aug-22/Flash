@@ -8,7 +8,10 @@ const scrapeMeesho = async (query, retries = 3) => {
     try {
       console.log(`🔍 Meesho: Searching for "${query}" (Attempt ${attempt}/${retries})...`);
 
+      const chromePath = process.env.CHROME_PATH || '/opt/render/.cache/puppeteer/chrome/linux-151.0.7922.77/chrome-linux64/chrome';
+
       browser = await puppeteer.launch({
+        executablePath: chromePath,
         headless: true,
         args: [
           '--no-sandbox',
@@ -16,7 +19,6 @@ const scrapeMeesho = async (query, retries = 3) => {
           '--disable-dev-shm-usage',
           '--disable-gpu',
           '--window-size=1366,768',
-          '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         ],
         ignoreHTTPSErrors: true,
       });
@@ -33,7 +35,6 @@ const scrapeMeesho = async (query, retries = 3) => {
 
       const searchUrl = `https://www.meesho.com/search?q=${encodeURIComponent(query)}`;
 
-      // Add random delay
       const delay = Math.floor(Math.random() * 3000) + 1000;
       await new Promise(resolve => setTimeout(resolve, delay));
 
@@ -42,7 +43,6 @@ const scrapeMeesho = async (query, retries = 3) => {
         timeout: 45000,
       });
 
-      // Scroll to load more products
       await page.evaluate(async () => {
         await new Promise((resolve) => {
           let totalHeight = 0;

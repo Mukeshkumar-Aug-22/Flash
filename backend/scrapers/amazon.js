@@ -8,7 +8,11 @@ const scrapeAmazon = async (query, retries = 3) => {
     try {
       console.log(`🔍 Amazon: Searching for "${query}" (Attempt ${attempt}/${retries})...`);
 
+      // ✅ Chrome path for Render
+      const chromePath = process.env.CHROME_PATH || '/opt/render/.cache/puppeteer/chrome/linux-151.0.7922.77/chrome-linux64/chrome';
+
       browser = await puppeteer.launch({
+        executablePath: chromePath,
         headless: true,
         args: [
           '--no-sandbox',
@@ -17,15 +21,12 @@ const scrapeAmazon = async (query, retries = 3) => {
           '--disable-gpu',
           '--window-size=1366,768',
           '--disable-blink-features=AutomationControlled',
-          '--disable-features=IsolateOrigins,site-per-process',
-          '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         ],
         ignoreHTTPSErrors: true,
       });
 
       const page = await browser.newPage();
 
-      // ✅ Better user agent
       await page.setUserAgent(
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ' +
         'AppleWebKit/537.36 (KHTML, like Gecko) ' +
@@ -36,7 +37,6 @@ const scrapeAmazon = async (query, retries = 3) => {
 
       const searchUrl = `https://www.amazon.in/s?k=${encodeURIComponent(query)}`;
 
-      // ✅ Add random delay
       const delay = Math.floor(Math.random() * 3000) + 1000;
       await new Promise(resolve => setTimeout(resolve, delay));
 
@@ -45,16 +45,14 @@ const scrapeAmazon = async (query, retries = 3) => {
         timeout: 45000,
       });
 
-      // ✅ Try multiple selectors
       await page.waitForSelector('[data-component-type="s-search-result"]', {
         timeout: 20000,
       }).catch(() => {
-        console.warn('⚠️ Amazon: Product selector not found, trying fallback...');
+        console.warn('⚠️ Amazon: Product selector not found');
       });
 
       const html = await page.content();
       
-      // ✅ Check if we got HTML
       if (!html || html.length < 1000) {
         console.warn('⚠️ Amazon: Received empty HTML');
         continue;
