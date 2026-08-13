@@ -1,4 +1,4 @@
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer');  // ← CHANGE from puppeteer-core
 const cheerio = require('cheerio');
 
 const scrapeAmazon = async (query) => {
@@ -7,11 +7,8 @@ const scrapeAmazon = async (query) => {
   try {
     console.log(`🔍 Amazon: Searching for "${query}"...`);
 
-    // Use Render's built-in Chrome
-    const executablePath = '/usr/bin/google-chrome-stable';
-
+    // ✅ REMOVE executablePath - let puppeteer find Chrome
     browser = await puppeteer.launch({
-      executablePath: executablePath,
       headless: true,
       args: [
         '--no-sandbox',

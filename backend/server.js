@@ -16,6 +16,9 @@ connectDB();
 // Create Express app
 const app = express();
 
+// ✅ ADD THIS - Fix rate limiter warning
+app.set('trust proxy', 1);
+
 // =============================================
 // CORS Configuration
 // =============================================
@@ -47,8 +50,8 @@ if (process.env.NODE_ENV === 'development') {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Rate Limiter (optional - uncomment if needed)
-// app.use('/api', generalLimiter);
+// Rate Limiter
+app.use('/api', generalLimiter);
 
 // =============================================
 // HEALTH CHECK ROUTE
@@ -63,26 +66,8 @@ app.get('/', (req, res) => {
       history: 'GET /api/search/history',
       clearHistory: 'DELETE /api/search/history',
       deleteOne: 'DELETE /api/search/history/:id',
-      testChrome: 'GET /test-chrome',
     },
   });
-});
-
-// =============================================
-// 🧪 TEST CHROME ENDPOINT (CRITICAL FOR DEBUGGING)
-// =============================================
-app.get('/test-chrome-launch', async (req, res) => {
-  try {
-    const puppeteer = require('puppeteer');
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox']
-    });
-    await browser.close();
-    res.json({ success: true, message: 'Chrome launched successfully!' });
-  } catch (error) {
-    res.json({ success: false, error: error.message });
-  }
 });
 
 // =============================================
@@ -107,8 +92,5 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`   URL: http://localhost:${PORT}`);
   console.log(`   Mode: ${process.env.NODE_ENV || 'development'}`);
   console.log('⚡ ================================== ⚡');
-  console.log('');
-  console.log('🔧 Test Chrome endpoint:');
-  console.log(`   http://localhost:${PORT}/test-chrome`);
   console.log('');
 });
